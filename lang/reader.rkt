@@ -9,12 +9,15 @@
                      [UPPERCASE-read-syntax read-syntax]
                      [UPPERCASE-get-info get-info]))
 
+
+;; Our version of read will use walk because I'm a little lazy.
 (define (wrap-read p)
   (lambda args
     (define datum (apply p args))
     (syntax->datum (walk (datum->syntax #f datum)))))
 
 
+;; This version of read-syntax takes a syntax object and transforms it in a funky way.
 (define (wrap-read-syntax p)
   (lambda args
     (define stx (apply p args))

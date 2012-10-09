@@ -12,32 +12,34 @@
 (define (wrap-read p)
   (lambda args
     (define datum (apply p args))
-    datum))
+    (syntax->datum (walk (datum->syntax #f datum)))))
+
 
 (define (wrap-read-syntax p)
   (lambda args
     (define stx (apply p args))
     (walk stx)))
 
+
 ;; walk: syntax -> syntax
 ;; Walk through the syntax object, replacing the string literals with their UPPERCASE.
 (define (walk stx)
-  (printf "Walking on ~s\n" stx)
   (syntax-case stx ()
-    [id
-     (identifier? #'stx)
+    [_
+     (identifier? stx)
      stx]
     [(pattern ...)
      (with-syntax ([(transformed-pattern ...)
                     (map walk (syntax->list #'(pattern ...)))])
        (syntax/loc stx
          (transformed-pattern ...)))]
-    [(pattern ... . tail)
-     (with-syntax ([(transformed-pattern ...)
+    [(p-head pattern ... . tail)
+     (with-syntax ([transformed-p-head (walk #'p-head)]
+                   [(transformed-pattern ...)
                     (map walk (syntax->list #'(pattern ...)))]
                    [transformed-tail (walk #'tail)])
        (syntax/loc stx
-         (transformed-pattern ... . transformed-tail)))]
+         (transformed-p-head transformed-pattern ... . transformed-tail)))]
     [#(pattern ...)
      (with-syntax ([(transformed-pattern ...)
                     (map walk (syntax->list #'(pattern ...)))])
@@ -49,13 +51,11 @@
        (syntax/loc stx
          #s(key-datum transformed-pattern)))]
     [const
-     (begin
-       (printf "I'm here with ~s\n" #'const)
-       (cond
-         [(string? (syntax-e #'const))
-          (datum->syntax #'const (string-upcase (syntax-e #'const)) #'const)]
-         [else
-          #'const]))]))
+     (cond
+       [(string? (syntax-e #'const))
+        (datum->syntax #'const (string-upcase (syntax-e #'const)) #'const)]
+       [else
+        #'const])]))
 
 
 
